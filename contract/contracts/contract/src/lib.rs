@@ -11,6 +11,7 @@ pub struct Task {
 #[contracttype]
 pub enum DataKey {
     Count,
+    LastId,
     Task(u64),
 }
 
@@ -20,14 +21,16 @@ pub struct Contract;
 #[contractimpl]
 impl Contract {
     pub fn add_task(env: Env, description: String) -> u64 {
+        let last_id: u64 = env.storage().instance().get(&DataKey::LastId).unwrap_or(0);
         let count: u64 = env.storage().instance().get(&DataKey::Count).unwrap_or(0);
-        let id = count + 1;
+        let id = last_id + 1;
         let task = Task {
             description: description.clone(),
             completed: false,
         };
         env.storage().persistent().set(&DataKey::Task(id), &task);
-        env.storage().instance().set(&DataKey::Count, &id);
+        env.storage().instance().set(&DataKey::LastId, &id);
+        env.storage().instance().set(&DataKey::Count, &(count + 1));
         env.events()
             .publish((Symbol::new(&env, "task_added"), id), description);
         id
@@ -54,7 +57,9 @@ impl Contract {
             .expect("task not found");
         env.storage().persistent().remove(&DataKey::Task(task_id));
         let count: u64 = env.storage().instance().get(&DataKey::Count).unwrap_or(0);
-        env.storage().instance().set(&DataKey::Count, &(count - 1));
+        if count > 0 {
+            env.storage().instance().set(&DataKey::Count, &(count - 1));
+        }
         env.events()
             .publish((Symbol::new(&env, "task_deleted"),), task_id);
     }

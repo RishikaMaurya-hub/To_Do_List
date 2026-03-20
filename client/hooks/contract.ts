@@ -10,6 +10,7 @@ import {
   nativeToScVal,
   scValToNative,
   rpc,
+  Account,
 } from "@stellar/stellar-sdk";
 import {
   isConnected,
@@ -109,7 +110,23 @@ export async function callContract(
   sign: boolean = true
 ) {
   const contract = new Contract(CONTRACT_ADDRESS);
-  const account = await server.getAccount(caller);
+
+  let account: Account;
+  try {
+    // Attempt to fetch the account from the network
+    const accountResponse = await server.getAccount(caller);
+    account = new Account(accountResponse.accountId(), accountResponse.sequenceNumber());
+  } catch (err) {
+    // If the account is not found, we can still simulate, but we can't sign/submit
+    if (sign) {
+      throw new Error(
+        `Your wallet account (${caller.slice(0, 6)}...) was not found on the network. ` +
+        `Please fund it via Friendbot to perform on-chain actions.`
+      );
+    }
+    // For read-only calls (simulations), use a dummy account with sequence 0
+    account = new Account(caller, "0");
+  }
 
   const tx = new TransactionBuilder(account, {
     fee: "100",
@@ -195,8 +212,8 @@ export function toScValString(value: string): xdr.ScVal {
   return nativeToScVal(value, { type: "string" });
 }
 
-export function toScValU32(value: number): xdr.ScVal {
-  return nativeToScVal(value, { type: "u32" });
+export function toScValU64(value: number | bigint): xdr.ScVal {
+  return nativeToScVal(value, { type: "u64" });
 }
 
 export function toScValI128(value: bigint): xdr.ScVal {
@@ -212,55 +229,83 @@ export function toScValBool(value: boolean): xdr.ScVal {
 }
 
 // ============================================================
-// Supply Chain Tracker — Contract Methods
+// To-Do List — Contract Methods
 // ============================================================
 
 /**
- * Add a product to the supply chain.
- * Calls: add_product(product_id: String, origin: String)
+ * Add a task to the list.
+ * Calls: add_task(description: String) -> u64
  */
-export async function addProduct(
+export async function addTask(
   caller: string,
-  productId: string,
-  origin: string
+  description: string
 ) {
   return callContract(
-    "add_product",
-    [toScValString(productId), toScValString(origin)],
+    "add_task",
+    [toScValString(description)],
     caller,
     true
   );
 }
 
 /**
- * Update a product's status.
- * Calls: update_status(product_id: String, new_status: String)
+ * Mark a task as completed.
+ * Calls: complete_task(task_id: u64)
  */
-export async function updateProductStatus(
+export async function completeTask(
   caller: string,
-  productId: string,
-  newStatus: string
+  taskId: number | bigint
 ) {
   return callContract(
-    "update_status",
-    [toScValString(productId), toScValString(newStatus)],
+    "complete_task",
+    [toScValU64(taskId)],
     caller,
     true
   );
 }
 
 /**
- * Get product details (read-only).
- * Calls: get_product(product_id: String) -> Map<Symbol, String>
- * Returns: { origin: string, status: string } or null
+ * Delete a task.
+ * Calls: delete_task(task_id: u64)
  */
-export async function getProduct(
-  productId: string,
+export async function deleteTask(
+  caller: string,
+  taskId: number | bigint
+) {
+  return callContract(
+    "delete_task",
+    [toScValU64(taskId)],
+    caller,
+    true
+  );
+}
+
+/**
+ * Get task details (read-only).
+ * Calls: get_task(task_id: u64) -> Task
+ * Returns: { description: string, completed: bool } or null
+ */
+export async function getTask(
+  taskId: number | bigint,
   caller?: string
 ) {
   return readContract(
-    "get_product",
-    [toScValString(productId)],
+    "get_task",
+    [toScValU64(taskId)],
+    caller
+  );
+}
+
+/**
+ * Get total task count (read-only).
+ * Calls: get_task_count() -> u32
+ */
+export async function getTaskCount(
+  caller?: string
+) {
+  return readContract(
+    "get_task_count",
+    [],
     caller
   );
 }

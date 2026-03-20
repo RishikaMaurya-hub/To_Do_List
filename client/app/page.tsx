@@ -85,7 +85,7 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto max-w-lg text-sm sm:text-base leading-relaxed text-white/40">
-            Register products, track shipments, and verify authenticity — immutably on Stellar.
+            Create, manage, and complete your tasks — secured immutably on the Stellar blockchain.
           </p>
 
           {/* Inline stats */}
@@ -112,17 +112,17 @@ export default function Home() {
 
         {/* Footer */}
         <div className="mt-10 flex flex-col items-center gap-4 animate-fade-in">
-          {/* Supply chain flow */}
+          {/* Task Flow */}
           <div className="flex items-center gap-3 text-xs text-white/20">
-            {["Created", "Shipped", "Delivered"].map((step, i) => (
+            {["Created", "Pending", "Completed"].map((step, i) => (
               <span key={step} className="flex items-center gap-3">
                 <span className="flex items-center gap-1.5">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
                       i === 0
-                        ? "bg-[#fbbf24]/50"
+                        ? "bg-[#7c6cf0]/50"
                         : i === 1
-                          ? "bg-[#4fc3f7]/50"
+                          ? "bg-[#fbbf24]/50"
                           : "bg-[#34d399]/50"
                     }`}
                   />
